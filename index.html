@@ -1,0 +1,1323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Practice App">
+    <title>Practice App - Golf Practice Tracker</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+            overscroll-behavior: none;
+            background: #1a6b54;
+        }
+        * {
+            -webkit-tap-highlight-color: transparent;
+        }
+        .golf-gradient {
+            background: #1a6b54;
+        }
+        .golf-card {
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(10px);
+        }
+        .golf-button-primary {
+            background: #2d8a6b;
+            box-shadow: 0 4px 15px rgba(29, 107, 84, 0.3);
+        }
+        .golf-button-primary:hover {
+            background: #1a6b54;
+            box-shadow: 0 6px 20px rgba(29, 107, 84, 0.4);
+        }
+        .golf-accent {
+            color: #0a4d3c;
+        }
+        .golf-border {
+            border-color: #2d8a6b;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // Lucide React icons as inline SVG components
+        const Check = ({ size = 24, className = "" }) => (
+            <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+        );
+
+        const X = ({ size = 24, className = "" }) => (
+            <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+        );
+
+        const ChevronRight = ({ size = 24, className = "" }) => (
+            <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+        );
+
+        const BarChart3 = ({ size = 24, className = "" }) => (
+            <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 3v18h18"></path>
+                <path d="M18 17V9"></path>
+                <path d="M13 17V5"></path>
+                <path d="M8 17v-3"></path>
+            </svg>
+        );
+
+        const TrendingUp = ({ size = 24, className = "" }) => (
+            <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                <polyline points="17 6 23 6 23 12"></polyline>
+            </svg>
+        );
+
+        const GolfPracticeTracker = () => {
+          const [currentView, setCurrentView] = useState('splash');
+          const [activeSession, setActiveSession] = useState(null);
+          const [sessionAttempts, setSessionAttempts] = useState([]);
+          const [practiceHistory, setPracticeHistory] = useState([]);
+          const [customShots, setCustomShots] = useState({});
+          const [shotCount, setShotCount] = useState(10);
+          const [selectedShotType, setSelectedShotType] = useState(null);
+          const [activeDrill, setActiveDrill] = useState(null);
+          const [currentDrillData, setCurrentDrillData] = useState(null);
+          const [editingDrill, setEditingDrill] = useState(null);
+          const [customDrills, setCustomDrills] = useState([]);
+          const [tenShotCustom, setTenShotCustom] = useState({ title: '10 Shot Challenge', description: 'Practice any club with customizable shot count' });
+          const [newDrill, setNewDrill] = useState({
+            title: '',
+            description: '',
+            clubs: []
+          });
+
+          const defaultShotTypes = [
+            { category: 'Woods', shots: ['Driver', '3 Wood', '5 Wood'] },
+            { category: 'Hybrids/Long Irons', shots: ['3 Iron / 3 Hybrid', '4 Iron / 4 Hybrid', '5 Iron / 5 Hybrid', 'Extra Hybrid'] },
+            { category: 'Mid Irons', shots: ['6 Iron', '7 Iron', '8 Iron', '9 Iron'] },
+            { category: 'Wedges', shots: ['Pitching Wedge', 'Sand Wedge (full)'] },
+            { category: 'Partial Swings', shots: ['¾ Swing', '½ Swing'] },
+            { category: 'Short Game', shots: ['20 yd Pitch', 'Short Chip', 'Long Chip', 'Bunker (up & out)'] },
+            { category: 'Putting', shots: ['30 ft Putt (inside 3 ft)', '7 ft Putt (made)', '3 ft Putt (made)'] }
+          ];
+
+          // Merge default shots with custom additions/removals
+          const getShotTypes = () => {
+            return defaultShotTypes.map(category => ({
+              category: category.category,
+              shots: [
+                ...category.shots.filter(shot => !customShots[shot]?.removed),
+                ...(customShots[category.category]?.added || [])
+              ]
+            }));
+          };
+
+          const shotTypes = getShotTypes();
+          const allShots = shotTypes.flatMap(category => category.shots);
+
+          useEffect(() => {
+            const saved = localStorage.getItem('golfPracticeHistory');
+            if (saved) {
+              setPracticeHistory(JSON.parse(saved));
+            }
+            
+            const savedCustomShots = localStorage.getItem('golfCustomShots');
+            if (savedCustomShots) {
+              setCustomShots(JSON.parse(savedCustomShots));
+            }
+
+            const savedCustomDrills = localStorage.getItem('golfCustomDrills');
+            if (savedCustomDrills) {
+              setCustomDrills(JSON.parse(savedCustomDrills));
+            }
+
+            const saved10Shot = localStorage.getItem('golf10ShotChallengeCustom');
+            if (saved10Shot) {
+              setTenShotCustom(JSON.parse(saved10Shot));
+            }
+
+            // Auto-transition from splash screen after 3.5 seconds
+            const splashTimer = setTimeout(() => {
+              if (currentView === 'splash') {
+                setCurrentView('drills');
+              }
+            }, 3500);
+
+            return () => clearTimeout(splashTimer);
+          }, []);
+
+          const startSession = (shotType) => {
+            setSelectedShotType(shotType);
+            setShotCount(10); // Reset to default
+            setCurrentView('selectCount');
+          };
+
+          const beginSession = () => {
+            setActiveSession(selectedShotType);
+            setSessionAttempts([]);
+            setCurrentView('session');
+          };
+
+          const recordAttempt = (success) => {
+            const newAttempts = [...sessionAttempts, success];
+            setSessionAttempts(newAttempts);
+            
+            if (newAttempts.length === shotCount) {
+              setTimeout(() => completeSession(newAttempts), 500);
+            }
+          };
+
+          const completeSession = (attempts) => {
+            const successCount = attempts.filter(a => a).length;
+            const newSession = {
+              date: new Date().toISOString(),
+              shotType: activeSession,
+              successRate: successCount,
+              total: attempts.length,
+              drill: activeDrill || '10 Shot Challenge'
+            };
+            
+            const updatedHistory = [newSession, ...practiceHistory];
+            setPracticeHistory(updatedHistory);
+            localStorage.setItem('golfPracticeHistory', JSON.stringify(updatedHistory));
+            
+            setActiveSession(null);
+            setSessionAttempts([]);
+            setSelectedShotType(null);
+            setShotCount(10);
+            setActiveDrill(null);
+            // Go back to custom drill view if we were practicing one, otherwise go to drills page
+            setCurrentView(currentDrillData ? 'customDrillPractice' : 'drills');
+          };
+
+          const getSuccessRate = (shotType) => {
+            const sessions = practiceHistory.filter(s => s.shotType === shotType);
+            if (sessions.length === 0) return null;
+            
+            const totalSuccess = sessions.reduce((sum, s) => sum + s.successRate, 0);
+            const totalAttempts = sessions.reduce((sum, s) => sum + s.total, 0);
+            return Math.round((totalSuccess / totalAttempts) * 100);
+          };
+
+          const exportToCSV = () => {
+            // Create CSV header
+            let csv = 'Date,Time,Drill,Shot Type,Success,Total,Success Rate\n';
+            
+            // Add each session as a row
+            practiceHistory.forEach(session => {
+              const date = new Date(session.date);
+              const dateStr = date.toLocaleDateString();
+              const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+              const successRate = Math.round((session.successRate / session.total) * 100);
+              const drillName = session.drill || '10 Shot Challenge';
+              
+              csv += `${dateStr},${timeStr},"${drillName}","${session.shotType}",${session.successRate},${session.total},${successRate}%\n`;
+            });
+            
+            // Create download link
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `practice-tracker-${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+          };
+
+          const clearAllData = () => {
+            if (window.confirm('Are you sure you want to delete all practice session data? This will NOT delete your custom drills or club settings.')) {
+              localStorage.removeItem('golfPracticeHistory');
+              setPracticeHistory([]);
+            }
+          };
+
+          const addCustomShot = (category) => {
+            const shotName = window.prompt(`Add a new shot to ${category}:`);
+            if (shotName && shotName.trim()) {
+              const updated = { ...customShots };
+              if (!updated[category]) {
+                updated[category] = { added: [] };
+              }
+              if (!updated[category].added) {
+                updated[category].added = [];
+              }
+              updated[category].added.push(shotName.trim());
+              setCustomShots(updated);
+              localStorage.setItem('golfCustomShots', JSON.stringify(updated));
+            }
+          };
+
+          const removeShot = (shotName, category) => {
+            if (window.confirm(`Remove "${shotName}" from your list?`)) {
+              const updated = { ...customShots };
+              
+              // Check if it's a custom added shot
+              const categoryData = updated[category];
+              if (categoryData?.added?.includes(shotName)) {
+                updated[category].added = categoryData.added.filter(s => s !== shotName);
+              } else {
+                // It's a default shot, mark as removed
+                if (!updated[shotName]) {
+                  updated[shotName] = {};
+                }
+                updated[shotName].removed = true;
+              }
+              
+              setCustomShots(updated);
+              localStorage.setItem('golfCustomShots', JSON.stringify(updated));
+            }
+          };
+
+          const addClubToDrill = () => {
+            const clubName = window.prompt('Enter what you want to practice:\n(e.g., 7 Iron, 15ft Putt, Fade, Draw, Chip Shot, Bunker Shot)');
+            const clubCount = window.prompt('How many shots?', '10');
+            
+            if (clubName && clubCount && !isNaN(clubCount) && parseInt(clubCount) > 0) {
+              setNewDrill({
+                ...newDrill,
+                clubs: [...newDrill.clubs, { name: clubName.trim(), count: parseInt(clubCount) }]
+              });
+            }
+          };
+
+          const removeClubFromDrill = (index) => {
+            setNewDrill({
+              ...newDrill,
+              clubs: newDrill.clubs.filter((_, i) => i !== index)
+            });
+          };
+
+          const saveDrill = () => {
+            if (!newDrill.title.trim()) {
+              alert('Please enter a drill title');
+              return;
+            }
+            if (newDrill.clubs.length === 0) {
+              alert('Please add at least one practice item to the drill');
+              return;
+            }
+
+            const drillToSave = {
+              id: Date.now(),
+              title: newDrill.title.trim(),
+              description: newDrill.description.trim(),
+              clubs: newDrill.clubs
+            };
+
+            const updatedDrills = [...customDrills, drillToSave];
+            setCustomDrills(updatedDrills);
+            localStorage.setItem('golfCustomDrills', JSON.stringify(updatedDrills));
+
+            // Navigate to the newly created drill's practice page
+            setCurrentDrillData(drillToSave);
+            setActiveDrill(drillToSave.title);
+            
+            // Reset form
+            setNewDrill({ title: '', description: '', clubs: [] });
+            setCurrentView('customDrillPractice');
+          };
+
+          // Splash Screen
+          if (currentView === 'splash') {
+            return (
+              <div className="fixed inset-0 w-full h-full golf-gradient flex items-center justify-center overflow-hidden"
+                   style={{
+                     width: '100vw',
+                     height: '100vh',
+                     position: 'fixed',
+                     top: 0,
+                     left: 0
+                   }}>
+                {/* Realistic grass background with gentle movement */}
+                <div className="absolute inset-0 overflow-hidden" style={{ bottom: '20vh' }}>
+                  <div className="absolute inset-0" 
+                       style={{
+                         background: 'linear-gradient(to bottom, #1a6b54 0%, #2d8a6b 50%, #1a6b54 100%)',
+                         animation: 'grassSway 2s ease-in-out infinite'
+                       }}>
+                    {/* Grass blades - multiple layers */}
+                    {[...Array(50)].map((_, i) => (
+                      <div 
+                        key={i}
+                        className="absolute bottom-0"
+                        style={{
+                          left: `${(i * 2.1)}%`,
+                          width: '4px',
+                          height: `${120 + Math.random() * 160}px`,
+                          background: `linear-gradient(to top, 
+                            ${i % 3 === 0 ? '#0a4d3c' : i % 3 === 1 ? '#1a6b54' : '#2d8a6b'}, 
+                            transparent)`,
+                          transformOrigin: 'bottom',
+                          animation: `bladeSwayLeft ${1 + Math.random() * 1}s ease-in-out infinite`,
+                          animationDelay: `${Math.random() * 1}s`,
+                          opacity: 0.6 + Math.random() * 0.4
+                        }}
+                      />
+                    ))}
+                    {/* Second layer of grass for depth */}
+                    {[...Array(40)].map((_, i) => (
+                      <div 
+                        key={`layer2-${i}`}
+                        className="absolute bottom-0"
+                        style={{
+                          left: `${(i * 2.5) + 1}%`,
+                          width: '3px',
+                          height: `${100 + Math.random() * 140}px`,
+                          background: `linear-gradient(to top, 
+                            ${i % 2 === 0 ? '#0f5d45' : '#25795e'}, 
+                            transparent)`,
+                          transformOrigin: 'bottom',
+                          animation: `bladeSwayRight ${1 + Math.random() * 1}s ease-in-out infinite`,
+                          animationDelay: `${Math.random() * 1}s`,
+                          opacity: 0.5 + Math.random() * 0.4
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Main content */}
+                <div className="text-center z-10 px-4 animate-fade-in" style={{ marginTop: '-35vh' }}>
+                  <h1 className="text-7xl font-bold text-white mb-4 drop-shadow-2xl tracking-tight"
+                      style={{
+                        textShadow: '0 4px 20px rgba(0,0,0,0.5)',
+                        animation: 'slideUp 0.8s ease-out'
+                      }}>
+                    Practice App
+                  </h1>
+                  <div className="text-white text-xl font-light tracking-wider opacity-90"
+                       style={{
+                         animation: 'fadeIn 1s ease-out 0.5s both'
+                       }}>
+                    Brought to you by <span className="font-semibold">Blaz</span>
+                  </div>
+                </div>
+
+                {/* Tap to continue hint */}
+                <button 
+                  onClick={() => setCurrentView('drills')}
+                  className="absolute bottom-8 left-1/2 transform -translate-x-1/2 text-white/60 text-sm z-10"
+                  style={{
+                    animation: 'pulse 2s ease-in-out infinite'
+                  }}>
+                  Tap to continue
+                </button>
+
+                <style>{`
+                  @keyframes slideUp {
+                    from {
+                      opacity: 0;
+                      transform: translateY(30px);
+                    }
+                    to {
+                      opacity: 1;
+                      transform: translateY(0);
+                    }
+                  }
+                  @keyframes fadeIn {
+                    from {
+                      opacity: 0;
+                    }
+                    to {
+                      opacity: 0.9;
+                    }
+                  }
+                  @keyframes pulse {
+                    0%, 100% {
+                      opacity: 0.4;
+                    }
+                    50% {
+                      opacity: 0.8;
+                    }
+                  }
+                  @keyframes bladeSwayLeft {
+                    0%, 100% {
+                      transform: rotate(0deg) scaleY(1);
+                    }
+                    50% {
+                      transform: rotate(-3deg) scaleY(1.02);
+                    }
+                  }
+                  @keyframes bladeSwayRight {
+                    0%, 100% {
+                      transform: rotate(0deg) scaleY(1);
+                    }
+                    50% {
+                      transform: rotate(3deg) scaleY(1.02);
+                    }
+                  }
+                  @keyframes grassSway {
+                    0%, 100% {
+                      transform: translateX(0px);
+                    }
+                    50% {
+                      transform: translateX(2px);
+                    }
+                  }
+                `}</style>
+              </div>
+            );
+          }
+          // Create Drill View
+          if (currentView === 'createDrill') {
+            return (
+              <div className="min-h-screen golf-gradient">
+                <div className="max-w-2xl mx-auto p-4 pb-20">
+                  <div className="golf-card rounded-3xl shadow-2xl p-6 mb-6">
+                    <button
+                      onClick={() => setCurrentView('drills')}
+                      className="golf-accent font-semibold mb-4 px-4 py-2 rounded-lg hover:bg-gray-100 transition-all"
+                    >
+                      ← Back
+                    </button>
+                    <h1 className="text-4xl font-bold golf-accent mb-2">Create New Drill</h1>
+                    <p className="text-gray-600">Design your custom practice drill</p>
+                  </div>
+
+                  <div className="golf-card rounded-2xl shadow-lg p-6 mb-4">
+                    <label className="block mb-2">
+                      <span className="text-gray-700 font-semibold">Drill Title *</span>
+                      <input
+                        type="text"
+                        value={newDrill.title}
+                        onChange={(e) => setNewDrill({ ...newDrill, title: e.target.value })}
+                        placeholder="e.g., Short Game Focus, Iron Practice"
+                        className="mt-1 block w-full px-4 py-3 rounded-lg border-2 golf-border focus:border-green-700 focus:ring-2 focus:ring-green-200 transition-all"
+                      />
+                    </label>
+
+                    <label className="block mb-4">
+                      <span className="text-gray-700 font-semibold">Description</span>
+                      <textarea
+                        value={newDrill.description}
+                        onChange={(e) => setNewDrill({ ...newDrill, description: e.target.value })}
+                        placeholder="Describe the goal of this drill..."
+                        rows="4"
+                        className="mt-1 block w-full px-4 py-3 rounded-lg border-2 golf-border focus:border-green-700 focus:ring-2 focus:ring-green-200 transition-all"
+                      />
+                    </label>
+                  </div>
+
+                  <div className="golf-card rounded-2xl shadow-lg p-6 mb-4">
+                    <div className="flex justify-between items-center mb-4">
+                      <h2 className="text-lg font-bold golf-accent">Practice Items *</h2>
+                      <button
+                        onClick={addClubToDrill}
+                        className="golf-button-primary text-white px-4 py-2 rounded-lg font-semibold transition-all"
+                      >
+                        + Add Item
+                      </button>
+                    </div>
+
+                    {newDrill.clubs.length === 0 ? (
+                      <p className="text-gray-500 text-center py-4">No items added yet. Click "+ Add Item" to start.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {newDrill.clubs.map((club, index) => (
+                          <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border golf-border">
+                            <div>
+                              <span className="font-semibold golf-accent">{club.name}</span>
+                              <span className="text-gray-600 ml-2">({club.count} shots)</span>
+                            </div>
+                            <button
+                              onClick={() => removeClubFromDrill(index)}
+                              className="bg-red-500 text-white px-3 py-1 rounded text-sm font-semibold hover:bg-red-600 active:bg-red-700 transition"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={saveDrill}
+                    className="w-full golf-button-primary text-white py-4 rounded-2xl font-bold text-lg shadow-xl transition-all"
+                  >
+                    Save Drill
+                  </button>
+                </div>
+              </div>
+            );
+          }
+
+          // Drills View
+          if (currentView === 'drills') {
+            return (
+              <div className="min-h-screen golf-gradient">
+                <div className="max-w-2xl mx-auto p-4 pb-20">
+                  <div className="golf-card rounded-3xl shadow-2xl p-6 mb-6">
+                    <h1 className="text-4xl font-bold golf-accent mb-2">Practice App</h1>
+                    <p className="text-gray-600">Track your practice sessions and improve your game</p>
+                  </div>
+
+                  <div className="flex gap-3 mb-6">
+                    <button
+                      onClick={() => setCurrentView('drills')}
+                      className="flex-1 golf-button-primary text-white py-3 rounded-xl font-semibold transition-all"
+                    >
+                      Drills
+                    </button>
+                    <button
+                      onClick={() => setCurrentView('stats')}
+                      className="flex-1 bg-white/90 golf-accent py-3 rounded-xl font-semibold border-2 golf-border flex items-center justify-center transition-all hover:bg-white"
+                    >
+                      <BarChart3 size={20} className="mr-2" />
+                      Stats
+                    </button>
+                  </div>
+
+                  <div className="space-y-3">
+                    <button
+                      onClick={() => setCurrentView('home')}
+                      className="w-full golf-card text-left p-5 rounded-2xl shadow-lg hover:shadow-xl active:shadow-md transition-all flex items-center justify-between"
+                    >
+                      <div>
+                        <div className="font-bold golf-accent text-lg">10 Shot Challenge</div>
+                        <div className="text-gray-600 text-sm">Practice any club with 10 shots</div>
+                      </div>
+                      <ChevronRight size={24} className="text-gray-400" />
+                    </button>
+
+                    {customDrills.map((drill) => (
+                      <button
+                        key={drill.id}
+                        onClick={() => {
+                          setCurrentDrillData(drill);
+                          setActiveDrill(drill.title);
+                          setCurrentView('customDrillPractice');
+                        }}
+                        className="w-full golf-card text-left p-5 rounded-2xl shadow-lg hover:shadow-xl active:shadow-md transition-all flex items-center justify-between"
+                      >
+                        <div>
+                          <div className="font-bold golf-accent text-lg">{drill.title}</div>
+                          {drill.description && (
+                            <div className="text-gray-600 text-sm">{drill.description}</div>
+                          )}
+                          <div className="text-gray-500 text-xs mt-1">
+                            {drill.clubs.length} item{drill.clubs.length !== 1 ? 's' : ''} • {drill.clubs.reduce((sum, club) => sum + club.count, 0)} total shots
+                          </div>
+                        </div>
+                        <ChevronRight size={24} className="text-gray-400" />
+                      </button>
+                    ))}
+
+                    <button
+                      onClick={() => {
+                        setNewDrill({ title: '', description: '', clubs: [] });
+                        setCurrentView('createDrill');
+                      }}
+                      className="w-full golf-button-primary text-white py-4 rounded-2xl font-semibold text-lg shadow-lg transition-all"
+                    >
+                      + Add New Drill
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
+          // Custom Drill Practice View
+          if (currentView === 'customDrillPractice') {
+            return (
+              <div className="min-h-screen golf-gradient">
+                <div className="max-w-2xl mx-auto p-4 pb-20">
+                  <div className="golf-card rounded-3xl shadow-2xl p-6 mb-6">
+                    <button
+                      onClick={() => {
+                        setCurrentDrillData(null);
+                        setActiveDrill(null);
+                        setCurrentView('drills');
+                      }}
+                      className="golf-accent font-semibold mb-4 px-4 py-2 rounded-lg hover:bg-gray-100 transition-all"
+                    >
+                      ← Back
+                    </button>
+                    <h1 className="text-4xl font-bold golf-accent mb-2">{currentDrillData?.title}</h1>
+                    {currentDrillData?.description && (
+                      <p className="text-gray-600">{currentDrillData.description}</p>
+                    )}
+                  </div>
+
+                  <div className="flex gap-3 mb-6">
+                    <button
+                      onClick={() => setCurrentView('drills')}
+                      className="flex-1 bg-white/90 golf-accent py-3 rounded-xl font-semibold border-2 golf-border transition-all hover:bg-white"
+                    >
+                      Drills
+                    </button>
+                    <button
+                      onClick={() => setCurrentView('stats')}
+                      className="flex-1 bg-white/90 golf-accent py-3 rounded-xl font-semibold border-2 golf-border flex items-center justify-center transition-all hover:bg-white"
+                    >
+                      <BarChart3 size={20} className="mr-2" />
+                      Stats
+                    </button>
+                    <button
+                      onClick={() => {
+                        setEditingDrill(currentDrillData);
+                        setCurrentView('manageDrill');
+                      }}
+                      className="flex-1 bg-white/90 golf-accent py-3 rounded-xl font-semibold border-2 golf-border transition-all hover:bg-white"
+                    >
+                      Manage
+                    </button>
+                  </div>
+
+                  <div className="space-y-3">
+                    {currentDrillData?.clubs.map((item, idx) => {
+                      const rate = getSuccessRate(item.name);
+                      return (
+                        <button
+                          key={idx}
+                          onClick={() => {
+                            setSelectedShotType(item.name);
+                            setShotCount(item.count);
+                            setCurrentView('selectCount');
+                          }}
+                          className="w-full golf-card text-left p-5 rounded-2xl shadow-lg hover:shadow-xl active:shadow-md transition-all flex items-center justify-between"
+                        >
+                          <div className="flex-1">
+                            <div className="font-bold golf-accent text-lg">{item.name}</div>
+                            <div className="text-gray-600 text-sm">{item.count} shots</div>
+                            {rate !== null && (
+                              <div className="text-sm text-gray-500">Recent average: {rate}%</div>
+                            )}
+                          </div>
+                          <ChevronRight size={24} className="text-gray-400" />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
+          // Shot Count Selector View
+          if (currentView === 'selectCount') {
+            const quickOptions = [5, 10, 15, 20, 25, 50];
+            
+            return (
+              <div className="min-h-screen golf-gradient flex flex-col">
+                <div className="p-4">
+                  <button
+                    onClick={() => {
+                      setSelectedShotType(null);
+                      // Go back to the custom drill view if we came from there, otherwise go home
+                      setCurrentView(currentDrillData ? 'customDrillPractice' : 'home');
+                    }}
+                    className="text-white font-semibold mb-4 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 transition-all"
+                  >
+                    ← Back
+                  </button>
+                </div>
+
+                <div className="flex-1 flex flex-col items-center justify-center px-4">
+                  <div className="text-white text-center mb-8">
+                    <h2 className="text-2xl font-bold mb-2">{selectedShotType}</h2>
+                    <p className="text-lg opacity-90 mb-8">How many shots do you want to practice?</p>
+                    
+                    <div className="bg-white/20 backdrop-blur-sm rounded-3xl p-8 mb-6 shadow-xl">
+                      <div className="text-7xl font-bold mb-2 drop-shadow-lg">{shotCount}</div>
+                      <div className="text-sm opacity-75">shots</div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-3 mb-6">
+                      {quickOptions.map(option => (
+                        <button
+                          key={option}
+                          onClick={() => setShotCount(option)}
+                          className={`py-4 rounded-xl font-bold text-lg transition-all shadow-lg ${
+                            shotCount === option
+                              ? 'bg-white golf-accent scale-105'
+                              : 'bg-white/20 text-white hover:bg-white/30'
+                          }`}
+                        >
+                          {option}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="flex items-center justify-center gap-4 mb-8">
+                      <label className="text-white text-sm font-semibold">Custom:</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="100"
+                        value={shotCount}
+                        onChange={(e) => setShotCount(Math.max(1, Math.min(100, parseInt(e.target.value) || 1)))}
+                        className="w-24 px-4 py-3 rounded-xl text-center golf-accent font-bold text-lg shadow-lg"
+                      />
+                    </div>
+
+                    <button
+                      onClick={beginSession}
+                      className="w-full max-w-md bg-white golf-accent py-4 rounded-2xl text-xl font-bold shadow-xl hover:shadow-2xl active:scale-95 transition-all"
+                    >
+                      Start Practice
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
+          // Home View
+          if (currentView === 'home') {
+            return (
+              <div className="min-h-screen golf-gradient">
+                <div className="max-w-2xl mx-auto p-4 pb-20">
+                  <div className="golf-card rounded-3xl shadow-2xl p-6 mb-6">
+                    <h1 className="text-4xl font-bold golf-accent mb-2">{tenShotCustom.title}</h1>
+                    <p className="text-gray-600">{tenShotCustom.description}</p>
+                  </div>
+
+                  <div className="flex gap-3 mb-6">
+                    <button
+                      onClick={() => setCurrentView('drills')}
+                      className="flex-1 bg-white/90 golf-accent py-3 rounded-xl font-semibold border-2 golf-border transition-all hover:bg-white"
+                    >
+                      Drills
+                    </button>
+                    <button
+                      onClick={() => setCurrentView('stats')}
+                      className="flex-1 bg-white/90 golf-accent py-3 rounded-xl font-semibold border-2 golf-border flex items-center justify-center transition-all hover:bg-white"
+                    >
+                      <BarChart3 size={20} className="mr-2" />
+                      Stats
+                    </button>
+                    <button
+                      onClick={() => {
+                        setEditingDrill({
+                          id: '10-shot-challenge',
+                          title: tenShotCustom.title,
+                          description: tenShotCustom.description,
+                          clubs: [] // This drill uses the dynamic club list, not a fixed set
+                        });
+                        setCurrentView('manageDrill');
+                      }}
+                      className="flex-1 bg-white/90 golf-accent py-3 rounded-xl font-semibold border-2 golf-border transition-all hover:bg-white"
+                    >
+                      Manage
+                    </button>
+                  </div>
+
+                  {shotTypes.map((category, idx) => (
+                    <div key={idx} className="mb-4">
+                      <h2 className="text-lg font-bold text-white mb-2 px-2">{category.category}</h2>
+                      <div className="golf-card rounded-2xl shadow-lg overflow-hidden">
+                        {category.shots.map((shot, shotIdx) => {
+                          const rate = getSuccessRate(shot);
+                          return (
+                            <button
+                              key={shotIdx}
+                              onClick={() => startSession(shot)}
+                              className="w-full flex items-center justify-between p-4 border-b last:border-b-0 hover:bg-gray-50 active:bg-gray-100 transition"
+                            >
+                              <div className="flex-1 text-left">
+                                <div className="font-semibold golf-accent">{shot}</div>
+                                {rate !== null && (
+                                  <div className="text-sm text-gray-500">Recent average: {rate}%</div>
+                                )}
+                              </div>
+                              <ChevronRight size={20} className="text-gray-400" />
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          }
+
+          // Session View
+          if (currentView === 'session') {
+            const successCount = sessionAttempts.filter(a => a).length;
+            
+            return (
+              <div className="min-h-screen golf-gradient flex flex-col">
+                <div className="p-4">
+                  <button
+                    onClick={() => {
+                      setActiveSession(null);
+                      setSessionAttempts([]);
+                      setCurrentView(currentDrillData ? 'customDrillPractice' : 'home');
+                    }}
+                    className="text-white font-semibold mb-4 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 transition-all"
+                  >
+                    ← Cancel
+                  </button>
+                </div>
+
+                <div className="flex-1 flex flex-col items-center justify-center px-4">
+                  <div className="text-white text-center mb-8">
+                    <h2 className="text-2xl font-bold mb-2">{activeSession}</h2>
+                    <div className="text-7xl font-bold mb-4 drop-shadow-lg">{successCount}/{shotCount}</div>
+                    <div className="text-xl opacity-90">
+                      {sessionAttempts.length < shotCount ? `${shotCount - sessionAttempts.length} shots remaining` : 'Session complete!'}
+                    </div>
+                  </div>
+
+                  <div className="grid gap-2 mb-8 max-w-md w-full" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(48px, 1fr))' }}>
+                    {[...Array(shotCount)].map((_, idx) => (
+                      <div
+                        key={idx}
+                        className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${
+                          idx < sessionAttempts.length
+                            ? sessionAttempts[idx]
+                              ? 'bg-white text-green-700 shadow-lg'
+                              : 'bg-red-500 text-white shadow-lg'
+                            : 'bg-white bg-opacity-20'
+                        }`}
+                      >
+                        {idx < sessionAttempts.length && (
+                          sessionAttempts[idx] ? <Check size={24} /> : <X size={24} />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {sessionAttempts.length < shotCount && (
+                    <div className="flex gap-4 w-full max-w-md">
+                      <button
+                        onClick={() => recordAttempt(false)}
+                        className="flex-1 bg-red-500 text-white py-6 rounded-2xl text-xl font-bold shadow-xl active:scale-95 transition-all flex flex-col items-center justify-center hover:bg-red-600"
+                      >
+                        <X size={32} className="mb-1" />
+                        <div>Miss</div>
+                      </button>
+                      <button
+                        onClick={() => recordAttempt(true)}
+                        className="flex-1 bg-white text-green-700 py-6 rounded-2xl text-xl font-bold shadow-xl active:scale-95 transition-all flex flex-col items-center justify-center hover:shadow-2xl"
+                      >
+                        <Check size={32} className="mb-1" />
+                        <div>Success</div>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          }
+
+          // Stats View
+          if (currentView === 'stats') {
+            // Get all unique shot types from practice history (includes custom drill shots)
+            const allPracticedShots = [...new Set(practiceHistory.map(s => s.shotType))];
+            
+            const statsData = allPracticedShots.map(shot => ({
+              shot,
+              rate: getSuccessRate(shot),
+              sessions: practiceHistory.filter(s => s.shotType === shot).length
+            })).filter(s => s.rate !== null).sort((a, b) => a.rate - b.rate);
+
+            // Group sessions by drill
+            const drillStats = {};
+            practiceHistory.forEach(session => {
+              const drillName = session.drill || '10 Shot Challenge';
+              if (!drillStats[drillName]) {
+                drillStats[drillName] = [];
+              }
+              drillStats[drillName].push(session);
+            });
+
+            // Calculate stats for each drill
+            const drillStatsData = Object.keys(drillStats).map(drillName => {
+              const sessions = drillStats[drillName];
+              const shotTypes = [...new Set(sessions.map(s => s.shotType))];
+              
+              const shots = shotTypes.map(shotType => {
+                const shotSessions = sessions.filter(s => s.shotType === shotType);
+                const totalSuccess = shotSessions.reduce((sum, s) => sum + s.successRate, 0);
+                const totalShots = shotSessions.reduce((sum, s) => sum + s.total, 0);
+                const rate = totalShots > 0 ? Math.round((totalSuccess / totalShots) * 100) : 0;
+                
+                return {
+                  shotType,
+                  rate,
+                  sessions: shotSessions.length
+                };
+              }).sort((a, b) => a.rate - b.rate);
+
+              return {
+                drillName,
+                shots,
+                totalSessions: sessions.length
+              };
+            });
+
+            return (
+              <div className="min-h-screen golf-gradient">
+                <div className="max-w-2xl mx-auto p-4 pb-20">
+                  <div className="golf-card rounded-3xl shadow-2xl p-6 mb-6">
+                    <h1 className="text-4xl font-bold golf-accent mb-2">Your Stats</h1>
+                    <p className="text-gray-600">{practiceHistory.length} total sessions</p>
+                  </div>
+
+                  <div className="flex gap-3 mb-6">
+                    <button
+                      onClick={() => setCurrentView('drills')}
+                      className="flex-1 bg-white/90 golf-accent py-3 rounded-xl font-semibold border-2 golf-border transition-all hover:bg-white"
+                    >
+                      Drills
+                    </button>
+                    <button
+                      onClick={() => setCurrentView('stats')}
+                      className="flex-1 golf-button-primary text-white py-3 rounded-xl font-semibold flex items-center justify-center transition-all"
+                    >
+                      <BarChart3 size={20} className="mr-2" />
+                      Stats
+                    </button>
+                  </div>
+
+                  {practiceHistory.length > 0 && (
+                    <button
+                      onClick={exportToCSV}
+                      className="w-full mb-4 golf-button-primary text-white py-3 rounded-xl font-semibold transition-all"
+                    >
+                      Export CSV
+                    </button>
+                  )}
+
+                  {statsData.length === 0 ? (
+                    <div className="golf-card rounded-2xl shadow-lg p-8 text-center">
+                      <TrendingUp size={48} className="mx-auto mb-4 text-gray-400" />
+                      <p className="text-gray-600">No practice sessions yet. Start practicing to see your stats!</p>
+                    </div>
+                  ) : (
+                    <div>
+                      <h2 className="text-lg font-bold text-white mb-3 px-2">Success Rates by Drill</h2>
+                      
+                      {drillStatsData.map((drill, drillIdx) => (
+                        <div key={drillIdx} className="mb-4">
+                          <div className="golf-card rounded-2xl shadow-lg overflow-hidden">
+                            <div className="bg-gradient-to-r from-green-50 to-green-100 p-4 border-b">
+                              <h3 className="text-lg font-bold golf-accent">{drill.drillName}</h3>
+                              <p className="text-sm text-gray-600">{drill.totalSessions} session{drill.totalSessions !== 1 ? 's' : ''}</p>
+                            </div>
+                            {drill.shots.map((shot, idx) => (
+                              <div key={idx} className="p-4 border-b last:border-b-0">
+                                <div className="flex justify-between items-center mb-2">
+                                  <span className="font-semibold golf-accent">{shot.shotType}</span>
+                                  <span className="text-2xl font-bold golf-accent">{shot.rate}%</span>
+                                </div>
+                                <div className="w-full bg-gray-200 rounded-full h-2">
+                                  <div
+                                    className="h-2 rounded-full transition-all"
+                                    style={{ 
+                                      width: `${shot.rate}%`,
+                                      background: shot.rate >= 80 ? '#2d8a6b' : shot.rate >= 60 ? '#f59e0b' : '#ef4444'
+                                    }}
+                                  />
+                                </div>
+                                <div className="text-xs text-gray-500 mt-1">{shot.sessions} session{shot.sessions !== 1 ? 's' : ''}</div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+
+                      <h2 className="text-lg font-bold text-white mb-3 px-2 mt-6">Recent Sessions</h2>
+                      <div className="golf-card rounded-2xl shadow-lg overflow-hidden">
+                        {practiceHistory.slice(0, 20).map((session, idx) => (
+                          <div key={idx} className="p-4 border-b last:border-b-0">
+                            <div className="flex justify-between items-center">
+                              <div>
+                                <div className="font-semibold golf-accent">{session.shotType}</div>
+                                <div className="text-xs text-gray-600 font-medium">{session.drill || '10 Shot Challenge'}</div>
+                                <div className="text-sm text-gray-500">
+                                  {new Date(session.date).toLocaleDateString()} at{' '}
+                                  {new Date(session.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <div className="text-2xl font-bold golf-accent">
+                                  {session.successRate}/{session.total}
+                                </div>
+                                <div className="text-sm text-gray-500">
+                                  {Math.round((session.successRate / session.total) * 100)}%
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {practiceHistory.length > 0 && (
+                    <div className="mt-6">
+                      <button
+                        onClick={clearAllData}
+                        className="w-full bg-red-500 text-white py-3 rounded-xl font-semibold hover:bg-red-600 active:bg-red-700 transition"
+                      >
+                        Clear All Data
+                      </button>
+                      <p className="text-xs text-gray-500 text-center mt-2">
+                        This will only delete practice session data. Your drills and club settings will be preserved.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          }
+
+          // Manage Drill View
+          if (currentView === 'manageDrill') {
+            const isBuiltIn = editingDrill?.id === '10-shot-challenge';
+            
+            return (
+              <div className="min-h-screen golf-gradient">
+                <div className="max-w-2xl mx-auto p-4 pb-20">
+                  <div className="golf-card rounded-3xl shadow-2xl p-6 mb-6">
+                    <button
+                      onClick={() => {
+                        setEditingDrill(null);
+                        // Go back to the drill's page if it's a custom drill, or home if it's the 10 Shot Challenge
+                        if (isBuiltIn) {
+                          setCurrentView('home');
+                        } else {
+                          setCurrentView('customDrillPractice');
+                        }
+                      }}
+                      className="golf-accent font-semibold mb-4 px-4 py-2 rounded-lg hover:bg-gray-100 transition-all"
+                    >
+                      ← Back
+                    </button>
+                    <h1 className="text-4xl font-bold golf-accent mb-2">Manage Drill</h1>
+                    <p className="text-gray-600">Edit drill details and items</p>
+                  </div>
+
+                  <div className="golf-card rounded-2xl shadow-lg p-6 mb-4">
+                    <label className="block mb-2">
+                      <span className="text-gray-700 font-semibold">Drill Title *</span>
+                      <input
+                        type="text"
+                        value={editingDrill?.title || ''}
+                        onChange={(e) => setEditingDrill({ ...editingDrill, title: e.target.value })}
+                        placeholder="e.g., Short Game Focus, Iron Practice"
+                        className="mt-1 block w-full px-4 py-3 rounded-lg border-2 golf-border focus:border-green-700 focus:ring-2 focus:ring-green-200 transition-all"
+                      />
+                    </label>
+
+                    <label className="block mb-4">
+                      <span className="text-gray-700 font-semibold">Description</span>
+                      <textarea
+                        value={editingDrill?.description || ''}
+                        onChange={(e) => setEditingDrill({ ...editingDrill, description: e.target.value })}
+                        placeholder="Describe the goal of this drill..."
+                        rows="4"
+                        className="mt-1 block w-full px-4 py-3 rounded-lg border-2 golf-border focus:border-green-700 focus:ring-2 focus:ring-green-200 transition-all"
+                      />
+                    </label>
+                  </div>
+
+                  {!isBuiltIn && (
+                    <>
+                      <div className="golf-card rounded-2xl shadow-lg p-6 mb-4">
+                        <div className="flex justify-between items-center mb-4">
+                          <h2 className="text-lg font-bold golf-accent">Practice Items</h2>
+                          <button
+                            onClick={() => {
+                              const clubName = window.prompt('Enter what you want to practice:\n(e.g., 7 Iron, 15ft Putt, Fade, Draw, Chip Shot, Bunker Shot)');
+                              const clubCount = window.prompt('How many shots?', '10');
+                              
+                              if (clubName && clubCount && !isNaN(clubCount) && parseInt(clubCount) > 0) {
+                                setEditingDrill({
+                                  ...editingDrill,
+                                  clubs: [...editingDrill.clubs, { name: clubName.trim(), count: parseInt(clubCount) }]
+                                });
+                              }
+                            }}
+                            className="golf-button-primary text-white px-4 py-2 rounded-lg font-semibold transition-all"
+                          >
+                            + Add Item
+                          </button>
+                        </div>
+
+                        {editingDrill?.clubs.length === 0 ? (
+                          <p className="text-gray-500 text-center py-4">No items added yet. Click "+ Add Item" to start.</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {editingDrill?.clubs.map((club, index) => (
+                              <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border golf-border">
+                                <div>
+                                  <span className="font-semibold golf-accent">{club.name}</span>
+                                  <span className="text-gray-600 ml-2">({club.count} shots)</span>
+                                </div>
+                                <button
+                                  onClick={() => {
+                                    setEditingDrill({
+                                      ...editingDrill,
+                                      clubs: editingDrill.clubs.filter((_, i) => i !== index)
+                                    });
+                                  }}
+                                  className="bg-red-500 text-white px-3 py-1 rounded text-sm font-semibold hover:bg-red-600 active:bg-red-700 transition"
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
+
+                  {isBuiltIn && (
+                    <div className="golf-card rounded-2xl shadow-lg p-6 mb-4">
+                      <p className="text-gray-600 text-center">
+                        The 10 Shot Challenge uses your global club list. Go to "Manage Clubs" from the main menu to add or remove clubs.
+                      </p>
+                      <button
+                        onClick={() => setCurrentView('manage')}
+                        className="w-full mt-4 golf-button-primary text-white py-3 rounded-lg font-semibold transition-all"
+                      >
+                        Manage Clubs
+                      </button>
+                    </div>
+                  )}
+
+                  <button
+                    onClick={() => {
+                      if (!editingDrill?.title.trim()) {
+                        alert('Please enter a drill title');
+                        return;
+                      }
+
+                      if (isBuiltIn) {
+                        // For built-in drill, we just update the title/description in a special storage
+                        const builtInCustomization = {
+                          title: editingDrill.title.trim(),
+                          description: editingDrill.description.trim()
+                        };
+                        localStorage.setItem('golf10ShotChallengeCustom', JSON.stringify(builtInCustomization));
+                        setTenShotCustom(builtInCustomization);
+                        setEditingDrill(null);
+                        setCurrentView('home');
+                      } else {
+                        // Update custom drill
+                        const updatedDrills = customDrills.map(d => 
+                          d.id === editingDrill.id ? editingDrill : d
+                        );
+                        setCustomDrills(updatedDrills);
+                        localStorage.setItem('golfCustomDrills', JSON.stringify(updatedDrills));
+                        // Update currentDrillData if we're editing the current drill
+                        if (currentDrillData?.id === editingDrill.id) {
+                          setCurrentDrillData(editingDrill);
+                        }
+                        setEditingDrill(null);
+                        setCurrentView('customDrillPractice');
+                      }
+                    }}
+                    className="w-full golf-button-primary text-white py-4 rounded-2xl font-bold text-lg shadow-xl transition-all mb-3"
+                  >
+                    Save Changes
+                  </button>
+
+                  {!isBuiltIn && (
+                    <button
+                      onClick={() => {
+                        if (window.confirm(`Are you sure you want to delete "${editingDrill?.title}"? This cannot be undone.`)) {
+                          const updatedDrills = customDrills.filter(d => d.id !== editingDrill.id);
+                          setCustomDrills(updatedDrills);
+                          localStorage.setItem('golfCustomDrills', JSON.stringify(updatedDrills));
+                          setEditingDrill(null);
+                          setCurrentDrillData(null);
+                          setCurrentView('drills');
+                        }
+                      }}
+                      className="w-full bg-red-500 text-white py-4 rounded-2xl font-bold text-lg shadow-xl hover:bg-red-600 active:bg-red-700 transition-all"
+                    >
+                      Delete Drill
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          }
+
+          // Manage Clubs View
+          if (currentView === 'manage') {
+            return (
+              <div className="min-h-screen golf-gradient">
+                <div className="max-w-2xl mx-auto p-4 pb-20">
+                  <div className="golf-card rounded-3xl shadow-2xl p-6 mb-6">
+                    <button
+                      onClick={() => setCurrentView('home')}
+                      className="golf-accent font-semibold mb-4 px-4 py-2 rounded-lg hover:bg-gray-100 transition-all"
+                    >
+                      ← Back
+                    </button>
+                    <h1 className="text-4xl font-bold golf-accent mb-2">Manage Clubs</h1>
+                    <p className="text-gray-600">Add or remove shots from your list</p>
+                  </div>
+
+                  {shotTypes.map((category, idx) => (
+                    <div key={idx} className="mb-4">
+                      <div className="flex justify-between items-center mb-2 px-2">
+                        <h2 className="text-lg font-bold text-white">{category.category}</h2>
+                        <button
+                          onClick={() => addCustomShot(category.category)}
+                          className="golf-button-primary text-white px-3 py-1 rounded-lg text-sm font-semibold transition-all"
+                        >
+                          + Add
+                        </button>
+                      </div>
+                      <div className="golf-card rounded-2xl shadow-lg overflow-hidden">
+                        {category.shots.length === 0 ? (
+                          <div className="p-4 text-gray-500 text-center">No shots in this category</div>
+                        ) : (
+                          category.shots.map((shot, shotIdx) => (
+                            <div
+                              key={shotIdx}
+                              className="flex items-center justify-between p-4 border-b last:border-b-0"
+                            >
+                              <div className="font-semibold golf-accent">{shot}</div>
+                              <button
+                                onClick={() => removeShot(shot, category.category)}
+                                className="bg-red-500 text-white px-3 py-1 rounded-lg text-sm font-semibold hover:bg-red-600 active:bg-red-700 transition"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          }
+        };
+
+        ReactDOM.render(<GolfPracticeTracker />, document.getElementById('root'));
+    </script>
+</body>
+</html>
