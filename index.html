@@ -20,9 +20,31 @@
             -webkit-user-select: none;
             user-select: none;
             overscroll-behavior: none;
+            background: linear-gradient(135deg, #0a4d3c 0%, #1a6b54 50%, #2d8a6b 100%);
         }
         * {
             -webkit-tap-highlight-color: transparent;
+        }
+        .golf-gradient {
+            background: linear-gradient(135deg, #0a4d3c 0%, #1a6b54 50%, #2d8a6b 100%);
+        }
+        .golf-card {
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(10px);
+        }
+        .golf-button-primary {
+            background: linear-gradient(135deg, #2d8a6b 0%, #1a6b54 100%);
+            box-shadow: 0 4px 15px rgba(29, 107, 84, 0.3);
+        }
+        .golf-button-primary:hover {
+            background: linear-gradient(135deg, #1a6b54 0%, #0a4d3c 100%);
+            box-shadow: 0 6px 20px rgba(29, 107, 84, 0.4);
+        }
+        .golf-accent {
+            color: #0a4d3c;
+        }
+        .golf-border {
+            border-color: #2d8a6b;
         }
     </style>
 </head>
@@ -77,6 +99,7 @@
           const [shotCount, setShotCount] = useState(10);
           const [selectedShotType, setSelectedShotType] = useState(null);
           const [activeDrill, setActiveDrill] = useState(null);
+          const [currentDrillData, setCurrentDrillData] = useState(null);
           const [editingDrill, setEditingDrill] = useState(null);
           const [customDrills, setCustomDrills] = useState([]);
           const [tenShotCustom, setTenShotCustom] = useState({ title: '10 Shot Challenge', description: 'Practice any club with customizable shot count' });
@@ -172,7 +195,8 @@
             setSelectedShotType(null);
             setShotCount(10);
             setActiveDrill(null);
-            setCurrentView('drills');
+            // Go back to custom drill view if we were practicing one, otherwise go to drills page
+            setCurrentView(currentDrillData ? 'customDrillPractice' : 'drills');
           };
 
           const getSuccessRate = (shotType) => {
@@ -303,20 +327,20 @@
           // Create Drill View
           if (currentView === 'createDrill') {
             return (
-              <div className="min-h-screen bg-gradient-to-b from-green-50 to-green-100">
+              <div className="min-h-screen golf-gradient">
                 <div className="max-w-2xl mx-auto p-4 pb-20">
-                  <div className="bg-white rounded-2xl shadow-lg p-6 mb-4">
+                  <div className="golf-card rounded-3xl shadow-2xl p-6 mb-6">
                     <button
                       onClick={() => setCurrentView('drills')}
-                      className="text-green-600 font-semibold mb-4"
+                      className="golf-accent font-semibold mb-4 px-4 py-2 rounded-lg hover:bg-gray-100 transition-all"
                     >
                       ← Back
                     </button>
-                    <h1 className="text-3xl font-bold text-green-800 mb-2">Create New Drill</h1>
+                    <h1 className="text-4xl font-bold golf-accent mb-2">Create New Drill</h1>
                     <p className="text-gray-600">Design your custom practice drill</p>
                   </div>
 
-                  <div className="bg-white rounded-xl shadow p-6 mb-4">
+                  <div className="golf-card rounded-2xl shadow-lg p-6 mb-4">
                     <label className="block mb-2">
                       <span className="text-gray-700 font-semibold">Drill Title *</span>
                       <input
@@ -324,7 +348,7 @@
                         value={newDrill.title}
                         onChange={(e) => setNewDrill({ ...newDrill, title: e.target.value })}
                         placeholder="e.g., Short Game Focus, Iron Practice"
-                        className="mt-1 block w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-green-600 focus:ring-1 focus:ring-green-600"
+                        className="mt-1 block w-full px-4 py-3 rounded-lg border-2 golf-border focus:border-green-700 focus:ring-2 focus:ring-green-200 transition-all"
                       />
                     </label>
 
@@ -335,17 +359,17 @@
                         onChange={(e) => setNewDrill({ ...newDrill, description: e.target.value })}
                         placeholder="Describe the goal of this drill..."
                         rows="4"
-                        className="mt-1 block w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-green-600 focus:ring-1 focus:ring-green-600"
+                        className="mt-1 block w-full px-4 py-3 rounded-lg border-2 golf-border focus:border-green-700 focus:ring-2 focus:ring-green-200 transition-all"
                       />
                     </label>
                   </div>
 
-                  <div className="bg-white rounded-xl shadow p-6 mb-4">
+                  <div className="golf-card rounded-2xl shadow-lg p-6 mb-4">
                     <div className="flex justify-between items-center mb-4">
-                      <h2 className="text-lg font-bold text-gray-800">Practice Items *</h2>
+                      <h2 className="text-lg font-bold golf-accent">Practice Items *</h2>
                       <button
                         onClick={addClubToDrill}
-                        className="bg-green-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-700 active:bg-green-800 transition"
+                        className="golf-button-primary text-white px-4 py-2 rounded-lg font-semibold transition-all"
                       >
                         + Add Item
                       </button>
@@ -356,9 +380,9 @@
                     ) : (
                       <div className="space-y-2">
                         {newDrill.clubs.map((club, index) => (
-                          <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                          <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border golf-border">
                             <div>
-                              <span className="font-semibold text-gray-800">{club.name}</span>
+                              <span className="font-semibold golf-accent">{club.name}</span>
                               <span className="text-gray-600 ml-2">({club.count} shots)</span>
                             </div>
                             <button
@@ -375,7 +399,7 @@
 
                   <button
                     onClick={saveDrill}
-                    className="w-full bg-green-600 text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-green-700 active:bg-green-800 transition"
+                    className="w-full golf-button-primary text-white py-4 rounded-2xl font-bold text-lg shadow-xl transition-all"
                   >
                     Save Drill
                   </button>
@@ -387,23 +411,23 @@
           // Drills View
           if (currentView === 'drills') {
             return (
-              <div className="min-h-screen bg-gradient-to-b from-green-50 to-green-100">
+              <div className="min-h-screen golf-gradient">
                 <div className="max-w-2xl mx-auto p-4 pb-20">
-                  <div className="bg-white rounded-2xl shadow-lg p-6 mb-4">
-                    <h1 className="text-3xl font-bold text-green-800 mb-2">Practice App</h1>
+                  <div className="golf-card rounded-3xl shadow-2xl p-6 mb-6">
+                    <h1 className="text-4xl font-bold golf-accent mb-2">Practice App</h1>
                     <p className="text-gray-600">Track your practice sessions and improve your game</p>
                   </div>
 
-                  <div className="flex gap-2 mb-4">
+                  <div className="flex gap-3 mb-6">
                     <button
                       onClick={() => setCurrentView('drills')}
-                      className="flex-1 bg-green-600 text-white py-3 rounded-xl font-semibold"
+                      className="flex-1 golf-button-primary text-white py-3 rounded-xl font-semibold transition-all"
                     >
                       Drills
                     </button>
                     <button
                       onClick={() => setCurrentView('stats')}
-                      className="flex-1 bg-white text-green-600 py-3 rounded-xl font-semibold border-2 border-green-600 flex items-center justify-center"
+                      className="flex-1 bg-white/90 golf-accent py-3 rounded-xl font-semibold border-2 golf-border flex items-center justify-center transition-all hover:bg-white"
                     >
                       <BarChart3 size={20} className="mr-2" />
                       Stats
@@ -413,10 +437,10 @@
                   <div className="space-y-3">
                     <button
                       onClick={() => setCurrentView('home')}
-                      className="w-full bg-white text-left p-4 rounded-xl shadow hover:shadow-md active:shadow-sm transition flex items-center justify-between"
+                      className="w-full golf-card text-left p-5 rounded-2xl shadow-lg hover:shadow-xl active:shadow-md transition-all flex items-center justify-between"
                     >
                       <div>
-                        <div className="font-bold text-green-800 text-lg">10 Shot Challenge</div>
+                        <div className="font-bold golf-accent text-lg">10 Shot Challenge</div>
                         <div className="text-gray-600 text-sm">Practice any club with 10 shots</div>
                       </div>
                       <ChevronRight size={24} className="text-gray-400" />
@@ -425,11 +449,15 @@
                     {customDrills.map((drill) => (
                       <button
                         key={drill.id}
-                        onClick={() => {/* We'll implement this next */}}
-                        className="w-full bg-white text-left p-4 rounded-xl shadow hover:shadow-md active:shadow-sm transition flex items-center justify-between"
+                        onClick={() => {
+                          setCurrentDrillData(drill);
+                          setActiveDrill(drill.title);
+                          setCurrentView('customDrillPractice');
+                        }}
+                        className="w-full golf-card text-left p-5 rounded-2xl shadow-lg hover:shadow-xl active:shadow-md transition-all flex items-center justify-between"
                       >
                         <div>
-                          <div className="font-bold text-green-800 text-lg">{drill.title}</div>
+                          <div className="font-bold golf-accent text-lg">{drill.title}</div>
                           {drill.description && (
                             <div className="text-gray-600 text-sm">{drill.description}</div>
                           )}
@@ -446,10 +474,87 @@
                         setNewDrill({ title: '', description: '', clubs: [] });
                         setCurrentView('createDrill');
                       }}
-                      className="w-full bg-green-600 text-white py-4 rounded-xl font-semibold text-lg shadow-lg hover:bg-green-700 active:bg-green-800 transition"
+                      className="w-full golf-button-primary text-white py-4 rounded-2xl font-semibold text-lg shadow-lg transition-all"
                     >
                       + Add New Drill
                     </button>
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
+          // Custom Drill Practice View
+          if (currentView === 'customDrillPractice') {
+            return (
+              <div className="min-h-screen golf-gradient">
+                <div className="max-w-2xl mx-auto p-4 pb-20">
+                  <div className="golf-card rounded-3xl shadow-2xl p-6 mb-6">
+                    <button
+                      onClick={() => {
+                        setCurrentDrillData(null);
+                        setActiveDrill(null);
+                        setCurrentView('drills');
+                      }}
+                      className="golf-accent font-semibold mb-4 px-4 py-2 rounded-lg hover:bg-gray-100 transition-all"
+                    >
+                      ← Back
+                    </button>
+                    <h1 className="text-4xl font-bold golf-accent mb-2">{currentDrillData?.title}</h1>
+                    {currentDrillData?.description && (
+                      <p className="text-gray-600">{currentDrillData.description}</p>
+                    )}
+                  </div>
+
+                  <div className="flex gap-3 mb-6">
+                    <button
+                      onClick={() => setCurrentView('drills')}
+                      className="flex-1 bg-white/90 golf-accent py-3 rounded-xl font-semibold border-2 golf-border transition-all hover:bg-white"
+                    >
+                      Drills
+                    </button>
+                    <button
+                      onClick={() => setCurrentView('stats')}
+                      className="flex-1 bg-white/90 golf-accent py-3 rounded-xl font-semibold border-2 golf-border flex items-center justify-center transition-all hover:bg-white"
+                    >
+                      <BarChart3 size={20} className="mr-2" />
+                      Stats
+                    </button>
+                    <button
+                      onClick={() => {
+                        setEditingDrill(currentDrillData);
+                        setCurrentView('manageDrill');
+                      }}
+                      className="flex-1 bg-white/90 golf-accent py-3 rounded-xl font-semibold border-2 golf-border transition-all hover:bg-white"
+                    >
+                      Manage
+                    </button>
+                  </div>
+
+                  <div className="space-y-3">
+                    {currentDrillData?.clubs.map((item, idx) => {
+                      const rate = getSuccessRate(item.name);
+                      return (
+                        <button
+                          key={idx}
+                          onClick={() => {
+                            setSelectedShotType(item.name);
+                            setShotCount(item.count);
+                            setCurrentView('selectCount');
+                          }}
+                          className="w-full golf-card text-left p-5 rounded-2xl shadow-lg hover:shadow-xl active:shadow-md transition-all flex items-center justify-between"
+                        >
+                          <div className="flex-1">
+                            <div className="font-bold golf-accent text-lg">{item.name}</div>
+                            <div className="text-gray-600 text-sm">{item.count} shots</div>
+                            {rate !== null && (
+                              <div className="text-sm text-gray-500">Recent average: {rate}%</div>
+                            )}
+                          </div>
+                          <ChevronRight size={24} className="text-gray-400" />
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
@@ -461,14 +566,15 @@
             const quickOptions = [5, 10, 15, 20, 25, 50];
             
             return (
-              <div className="min-h-screen bg-gradient-to-b from-green-600 to-green-700 flex flex-col">
+              <div className="min-h-screen golf-gradient flex flex-col">
                 <div className="p-4">
                   <button
                     onClick={() => {
                       setSelectedShotType(null);
-                      setCurrentView('home');
+                      // Go back to the custom drill view if we came from there, otherwise go home
+                      setCurrentView(currentDrillData ? 'customDrillPractice' : 'home');
                     }}
-                    className="text-white font-semibold mb-4"
+                    className="text-white font-semibold mb-4 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 transition-all"
                   >
                     ← Back
                   </button>
@@ -479,8 +585,8 @@
                     <h2 className="text-2xl font-bold mb-2">{selectedShotType}</h2>
                     <p className="text-lg opacity-90 mb-8">How many shots do you want to practice?</p>
                     
-                    <div className="bg-white bg-opacity-20 rounded-2xl p-6 mb-6">
-                      <div className="text-6xl font-bold mb-2">{shotCount}</div>
+                    <div className="bg-white/20 backdrop-blur-sm rounded-3xl p-8 mb-6 shadow-xl">
+                      <div className="text-7xl font-bold mb-2 drop-shadow-lg">{shotCount}</div>
                       <div className="text-sm opacity-75">shots</div>
                     </div>
 
@@ -489,10 +595,10 @@
                         <button
                           key={option}
                           onClick={() => setShotCount(option)}
-                          className={`py-4 rounded-xl font-bold text-lg transition ${
+                          className={`py-4 rounded-xl font-bold text-lg transition-all shadow-lg ${
                             shotCount === option
-                              ? 'bg-white text-green-600'
-                              : 'bg-white bg-opacity-20 text-white hover:bg-opacity-30'
+                              ? 'bg-white golf-accent scale-105'
+                              : 'bg-white/20 text-white hover:bg-white/30'
                           }`}
                         >
                           {option}
@@ -501,20 +607,20 @@
                     </div>
 
                     <div className="flex items-center justify-center gap-4 mb-8">
-                      <label className="text-white text-sm">Custom:</label>
+                      <label className="text-white text-sm font-semibold">Custom:</label>
                       <input
                         type="number"
                         min="1"
                         max="100"
                         value={shotCount}
                         onChange={(e) => setShotCount(Math.max(1, Math.min(100, parseInt(e.target.value) || 1)))}
-                        className="w-20 px-3 py-2 rounded-lg text-center text-gray-800 font-bold text-lg"
+                        className="w-24 px-4 py-3 rounded-xl text-center golf-accent font-bold text-lg shadow-lg"
                       />
                     </div>
 
                     <button
                       onClick={beginSession}
-                      className="w-full max-w-md bg-white text-green-600 py-4 rounded-2xl text-xl font-bold shadow-lg hover:bg-opacity-90 active:scale-95 transition"
+                      className="w-full max-w-md bg-white golf-accent py-4 rounded-2xl text-xl font-bold shadow-xl hover:shadow-2xl active:scale-95 transition-all"
                     >
                       Start Practice
                     </button>
@@ -527,23 +633,23 @@
           // Home View
           if (currentView === 'home') {
             return (
-              <div className="min-h-screen bg-gradient-to-b from-green-50 to-green-100">
+              <div className="min-h-screen golf-gradient">
                 <div className="max-w-2xl mx-auto p-4 pb-20">
-                  <div className="bg-white rounded-2xl shadow-lg p-6 mb-4">
-                    <h1 className="text-3xl font-bold text-green-800 mb-2">{tenShotCustom.title}</h1>
+                  <div className="golf-card rounded-3xl shadow-2xl p-6 mb-6">
+                    <h1 className="text-4xl font-bold golf-accent mb-2">{tenShotCustom.title}</h1>
                     <p className="text-gray-600">{tenShotCustom.description}</p>
                   </div>
 
-                  <div className="flex gap-2 mb-4">
+                  <div className="flex gap-3 mb-6">
                     <button
                       onClick={() => setCurrentView('drills')}
-                      className="flex-1 bg-green-600 text-white py-3 rounded-xl font-semibold"
+                      className="flex-1 bg-white/90 golf-accent py-3 rounded-xl font-semibold border-2 golf-border transition-all hover:bg-white"
                     >
                       Drills
                     </button>
                     <button
                       onClick={() => setCurrentView('stats')}
-                      className="flex-1 bg-white text-green-600 py-3 rounded-xl font-semibold border-2 border-green-600 flex items-center justify-center"
+                      className="flex-1 bg-white/90 golf-accent py-3 rounded-xl font-semibold border-2 golf-border flex items-center justify-center transition-all hover:bg-white"
                     >
                       <BarChart3 size={20} className="mr-2" />
                       Stats
@@ -558,7 +664,7 @@
                         });
                         setCurrentView('manageDrill');
                       }}
-                      className="flex-1 bg-white text-green-600 py-3 rounded-xl font-semibold border-2 border-green-600"
+                      className="flex-1 bg-white/90 golf-accent py-3 rounded-xl font-semibold border-2 golf-border transition-all hover:bg-white"
                     >
                       Manage
                     </button>
@@ -566,18 +672,18 @@
 
                   {shotTypes.map((category, idx) => (
                     <div key={idx} className="mb-4">
-                      <h2 className="text-lg font-bold text-gray-700 mb-2 px-2">{category.category}</h2>
-                      <div className="bg-white rounded-xl shadow overflow-hidden">
+                      <h2 className="text-lg font-bold text-white mb-2 px-2">{category.category}</h2>
+                      <div className="golf-card rounded-2xl shadow-lg overflow-hidden">
                         {category.shots.map((shot, shotIdx) => {
                           const rate = getSuccessRate(shot);
                           return (
                             <button
                               key={shotIdx}
                               onClick={() => startSession(shot)}
-                              className="w-full flex items-center justify-between p-4 border-b last:border-b-0 hover:bg-green-50 active:bg-green-100 transition"
+                              className="w-full flex items-center justify-between p-4 border-b last:border-b-0 hover:bg-gray-50 active:bg-gray-100 transition"
                             >
                               <div className="flex-1 text-left">
-                                <div className="font-semibold text-gray-800">{shot}</div>
+                                <div className="font-semibold golf-accent">{shot}</div>
                                 {rate !== null && (
                                   <div className="text-sm text-gray-500">Recent average: {rate}%</div>
                                 )}
@@ -599,15 +705,15 @@
             const successCount = sessionAttempts.filter(a => a).length;
             
             return (
-              <div className="min-h-screen bg-gradient-to-b from-green-600 to-green-700 flex flex-col">
+              <div className="min-h-screen golf-gradient flex flex-col">
                 <div className="p-4">
                   <button
                     onClick={() => {
                       setActiveSession(null);
                       setSessionAttempts([]);
-                      setCurrentView('home');
+                      setCurrentView(currentDrillData ? 'customDrillPractice' : 'home');
                     }}
-                    className="text-white font-semibold mb-4"
+                    className="text-white font-semibold mb-4 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 transition-all"
                   >
                     ← Cancel
                   </button>
@@ -616,7 +722,7 @@
                 <div className="flex-1 flex flex-col items-center justify-center px-4">
                   <div className="text-white text-center mb-8">
                     <h2 className="text-2xl font-bold mb-2">{activeSession}</h2>
-                    <div className="text-6xl font-bold mb-4">{successCount}/{shotCount}</div>
+                    <div className="text-7xl font-bold mb-4 drop-shadow-lg">{successCount}/{shotCount}</div>
                     <div className="text-xl opacity-90">
                       {sessionAttempts.length < shotCount ? `${shotCount - sessionAttempts.length} shots remaining` : 'Session complete!'}
                     </div>
@@ -626,12 +732,12 @@
                     {[...Array(shotCount)].map((_, idx) => (
                       <div
                         key={idx}
-                        className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                        className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${
                           idx < sessionAttempts.length
                             ? sessionAttempts[idx]
-                              ? 'bg-white text-green-600'
-                              : 'bg-red-500 text-white'
-                            : 'bg-white bg-opacity-30'
+                              ? 'bg-white text-green-700 shadow-lg'
+                              : 'bg-red-500 text-white shadow-lg'
+                            : 'bg-white bg-opacity-20'
                         }`}
                       >
                         {idx < sessionAttempts.length && (
@@ -645,14 +751,14 @@
                     <div className="flex gap-4 w-full max-w-md">
                       <button
                         onClick={() => recordAttempt(false)}
-                        className="flex-1 bg-red-500 text-white py-6 rounded-2xl text-xl font-bold shadow-lg active:scale-95 transition flex flex-col items-center justify-center"
+                        className="flex-1 bg-red-500 text-white py-6 rounded-2xl text-xl font-bold shadow-xl active:scale-95 transition-all flex flex-col items-center justify-center hover:bg-red-600"
                       >
                         <X size={32} className="mb-1" />
                         <div>Miss</div>
                       </button>
                       <button
                         onClick={() => recordAttempt(true)}
-                        className="flex-1 bg-white text-green-600 py-6 rounded-2xl text-xl font-bold shadow-lg active:scale-95 transition flex flex-col items-center justify-center"
+                        className="flex-1 bg-white text-green-700 py-6 rounded-2xl text-xl font-bold shadow-xl active:scale-95 transition-all flex flex-col items-center justify-center hover:shadow-2xl"
                       >
                         <Check size={32} className="mb-1" />
                         <div>Success</div>
@@ -673,23 +779,23 @@
             })).filter(s => s.rate !== null).sort((a, b) => a.rate - b.rate);
 
             return (
-              <div className="min-h-screen bg-gradient-to-b from-green-50 to-green-100">
+              <div className="min-h-screen golf-gradient">
                 <div className="max-w-2xl mx-auto p-4 pb-20">
-                  <div className="bg-white rounded-2xl shadow-lg p-6 mb-4">
-                    <h1 className="text-3xl font-bold text-green-800 mb-2">Your Stats</h1>
+                  <div className="golf-card rounded-3xl shadow-2xl p-6 mb-6">
+                    <h1 className="text-4xl font-bold golf-accent mb-2">Your Stats</h1>
                     <p className="text-gray-600">{practiceHistory.length} total sessions</p>
                   </div>
 
-                  <div className="flex gap-2 mb-4">
+                  <div className="flex gap-3 mb-6">
                     <button
                       onClick={() => setCurrentView('drills')}
-                      className="flex-1 bg-white text-green-600 py-3 rounded-xl font-semibold border-2 border-green-600"
+                      className="flex-1 bg-white/90 golf-accent py-3 rounded-xl font-semibold border-2 golf-border transition-all hover:bg-white"
                     >
                       Drills
                     </button>
                     <button
                       onClick={() => setCurrentView('stats')}
-                      className="flex-1 bg-green-600 text-white py-3 rounded-xl font-semibold flex items-center justify-center"
+                      className="flex-1 golf-button-primary text-white py-3 rounded-xl font-semibold flex items-center justify-center transition-all"
                     >
                       <BarChart3 size={20} className="mr-2" />
                       Stats
@@ -699,30 +805,30 @@
                   {practiceHistory.length > 0 && (
                     <button
                       onClick={exportToCSV}
-                      className="w-full mb-4 bg-green-600 text-white py-3 rounded-xl font-semibold hover:bg-green-700 active:bg-green-800 transition"
+                      className="w-full mb-4 golf-button-primary text-white py-3 rounded-xl font-semibold transition-all"
                     >
                       Export CSV
                     </button>
                   )}
 
                   {statsData.length === 0 ? (
-                    <div className="bg-white rounded-xl shadow p-8 text-center">
+                    <div className="golf-card rounded-2xl shadow-lg p-8 text-center">
                       <TrendingUp size={48} className="mx-auto mb-4 text-gray-400" />
                       <p className="text-gray-600">No practice sessions yet. Start practicing to see your stats!</p>
                     </div>
                   ) : (
                     <div>
-                      <h2 className="text-lg font-bold text-gray-700 mb-3 px-2">Success Rates</h2>
-                      <div className="bg-white rounded-xl shadow overflow-hidden mb-4">
+                      <h2 className="text-lg font-bold text-white mb-3 px-2">Success Rates</h2>
+                      <div className="golf-card rounded-2xl shadow-lg overflow-hidden mb-4">
                         {statsData.map((stat, idx) => (
                           <div key={idx} className="p-4 border-b last:border-b-0">
                             <div className="flex justify-between items-center mb-2">
-                              <span className="font-semibold text-gray-800">{stat.shot}</span>
-                              <span className="text-2xl font-bold text-green-600">{stat.rate}%</span>
+                              <span className="font-semibold golf-accent">{stat.shot}</span>
+                              <span className="text-2xl font-bold golf-accent">{stat.rate}%</span>
                             </div>
                             <div className="w-full bg-gray-200 rounded-full h-2">
                               <div
-                                className="bg-green-600 h-2 rounded-full transition-all"
+                                className="golf-button-primary h-2 rounded-full transition-all"
                                 style={{ width: `${stat.rate}%` }}
                               />
                             </div>
@@ -731,20 +837,20 @@
                         ))}
                       </div>
 
-                      <h2 className="text-lg font-bold text-gray-700 mb-3 px-2">Recent Sessions</h2>
-                      <div className="bg-white rounded-xl shadow overflow-hidden">
+                      <h2 className="text-lg font-bold text-white mb-3 px-2">Recent Sessions</h2>
+                      <div className="golf-card rounded-2xl shadow-lg overflow-hidden">
                         {practiceHistory.slice(0, 20).map((session, idx) => (
                           <div key={idx} className="p-4 border-b last:border-b-0">
                             <div className="flex justify-between items-center">
                               <div>
-                                <div className="font-semibold text-gray-800">{session.shotType}</div>
+                                <div className="font-semibold golf-accent">{session.shotType}</div>
                                 <div className="text-sm text-gray-500">
                                   {new Date(session.date).toLocaleDateString()} at{' '}
                                   {new Date(session.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                 </div>
                               </div>
                               <div className="text-right">
-                                <div className="text-2xl font-bold text-green-600">
+                                <div className="text-2xl font-bold golf-accent">
                                   {session.successRate}/{session.total}
                                 </div>
                                 <div className="text-sm text-gray-500">
@@ -781,23 +887,23 @@
             const isBuiltIn = editingDrill?.id === '10-shot-challenge';
             
             return (
-              <div className="min-h-screen bg-gradient-to-b from-green-50 to-green-100">
+              <div className="min-h-screen golf-gradient">
                 <div className="max-w-2xl mx-auto p-4 pb-20">
-                  <div className="bg-white rounded-2xl shadow-lg p-6 mb-4">
+                  <div className="golf-card rounded-3xl shadow-2xl p-6 mb-6">
                     <button
                       onClick={() => {
                         setEditingDrill(null);
                         setCurrentView('home');
                       }}
-                      className="text-green-600 font-semibold mb-4"
+                      className="golf-accent font-semibold mb-4 px-4 py-2 rounded-lg hover:bg-gray-100 transition-all"
                     >
                       ← Back
                     </button>
-                    <h1 className="text-3xl font-bold text-green-800 mb-2">Manage Drill</h1>
-                    <p className="text-gray-600">Edit drill details and clubs</p>
+                    <h1 className="text-4xl font-bold golf-accent mb-2">Manage Drill</h1>
+                    <p className="text-gray-600">Edit drill details and items</p>
                   </div>
 
-                  <div className="bg-white rounded-xl shadow p-6 mb-4">
+                  <div className="golf-card rounded-2xl shadow-lg p-6 mb-4">
                     <label className="block mb-2">
                       <span className="text-gray-700 font-semibold">Drill Title *</span>
                       <input
@@ -805,7 +911,7 @@
                         value={editingDrill?.title || ''}
                         onChange={(e) => setEditingDrill({ ...editingDrill, title: e.target.value })}
                         placeholder="e.g., Short Game Focus, Iron Practice"
-                        className="mt-1 block w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-green-600 focus:ring-1 focus:ring-green-600"
+                        className="mt-1 block w-full px-4 py-3 rounded-lg border-2 golf-border focus:border-green-700 focus:ring-2 focus:ring-green-200 transition-all"
                       />
                     </label>
 
@@ -816,16 +922,16 @@
                         onChange={(e) => setEditingDrill({ ...editingDrill, description: e.target.value })}
                         placeholder="Describe the goal of this drill..."
                         rows="4"
-                        className="mt-1 block w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-green-600 focus:ring-1 focus:ring-green-600"
+                        className="mt-1 block w-full px-4 py-3 rounded-lg border-2 golf-border focus:border-green-700 focus:ring-2 focus:ring-green-200 transition-all"
                       />
                     </label>
                   </div>
 
                   {!isBuiltIn && (
                     <>
-                      <div className="bg-white rounded-xl shadow p-6 mb-4">
+                      <div className="golf-card rounded-2xl shadow-lg p-6 mb-4">
                         <div className="flex justify-between items-center mb-4">
-                          <h2 className="text-lg font-bold text-gray-800">Practice Items</h2>
+                          <h2 className="text-lg font-bold golf-accent">Practice Items</h2>
                           <button
                             onClick={() => {
                               const clubName = window.prompt('Enter what you want to practice:\n(e.g., 7 Iron, 15ft Putt, Fade, Draw, Chip Shot, Bunker Shot)');
@@ -838,7 +944,7 @@
                                 });
                               }
                             }}
-                            className="bg-green-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-700 active:bg-green-800 transition"
+                            className="golf-button-primary text-white px-4 py-2 rounded-lg font-semibold transition-all"
                           >
                             + Add Item
                           </button>
@@ -849,9 +955,9 @@
                         ) : (
                           <div className="space-y-2">
                             {editingDrill?.clubs.map((club, index) => (
-                              <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                              <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border golf-border">
                                 <div>
-                                  <span className="font-semibold text-gray-800">{club.name}</span>
+                                  <span className="font-semibold golf-accent">{club.name}</span>
                                   <span className="text-gray-600 ml-2">({club.count} shots)</span>
                                 </div>
                                 <button
@@ -874,13 +980,13 @@
                   )}
 
                   {isBuiltIn && (
-                    <div className="bg-white rounded-xl shadow p-6 mb-4">
+                    <div className="golf-card rounded-2xl shadow-lg p-6 mb-4">
                       <p className="text-gray-600 text-center">
                         The 10 Shot Challenge uses your global club list. Go to "Manage Clubs" from the main menu to add or remove clubs.
                       </p>
                       <button
                         onClick={() => setCurrentView('manage')}
-                        className="w-full mt-4 bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 active:bg-green-800 transition"
+                        className="w-full mt-4 golf-button-primary text-white py-3 rounded-lg font-semibold transition-all"
                       >
                         Manage Clubs
                       </button>
@@ -914,7 +1020,7 @@
                       setEditingDrill(null);
                       setCurrentView('home');
                     }}
-                    className="w-full bg-green-600 text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-green-700 active:bg-green-800 transition"
+                    className="w-full golf-button-primary text-white py-4 rounded-2xl font-bold text-lg shadow-xl transition-all"
                   >
                     Save Changes
                   </button>
@@ -926,31 +1032,31 @@
           // Manage Clubs View
           if (currentView === 'manage') {
             return (
-              <div className="min-h-screen bg-gradient-to-b from-green-50 to-green-100">
+              <div className="min-h-screen golf-gradient">
                 <div className="max-w-2xl mx-auto p-4 pb-20">
-                  <div className="bg-white rounded-2xl shadow-lg p-6 mb-4">
+                  <div className="golf-card rounded-3xl shadow-2xl p-6 mb-6">
                     <button
                       onClick={() => setCurrentView('home')}
-                      className="text-green-600 font-semibold mb-4"
+                      className="golf-accent font-semibold mb-4 px-4 py-2 rounded-lg hover:bg-gray-100 transition-all"
                     >
                       ← Back
                     </button>
-                    <h1 className="text-3xl font-bold text-green-800 mb-2">Manage Clubs</h1>
+                    <h1 className="text-4xl font-bold golf-accent mb-2">Manage Clubs</h1>
                     <p className="text-gray-600">Add or remove shots from your list</p>
                   </div>
 
                   {shotTypes.map((category, idx) => (
                     <div key={idx} className="mb-4">
                       <div className="flex justify-between items-center mb-2 px-2">
-                        <h2 className="text-lg font-bold text-gray-700">{category.category}</h2>
+                        <h2 className="text-lg font-bold text-white">{category.category}</h2>
                         <button
                           onClick={() => addCustomShot(category.category)}
-                          className="bg-green-600 text-white px-3 py-1 rounded-lg text-sm font-semibold hover:bg-green-700 active:bg-green-800 transition"
+                          className="golf-button-primary text-white px-3 py-1 rounded-lg text-sm font-semibold transition-all"
                         >
                           + Add
                         </button>
                       </div>
-                      <div className="bg-white rounded-xl shadow overflow-hidden">
+                      <div className="golf-card rounded-2xl shadow-lg overflow-hidden">
                         {category.shots.length === 0 ? (
                           <div className="p-4 text-gray-500 text-center">No shots in this category</div>
                         ) : (
@@ -959,7 +1065,7 @@
                               key={shotIdx}
                               className="flex items-center justify-between p-4 border-b last:border-b-0"
                             >
-                              <div className="font-semibold text-gray-800">{shot}</div>
+                              <div className="font-semibold golf-accent">{shot}</div>
                               <button
                                 onClick={() => removeShot(shot, category.category)}
                                 className="bg-red-500 text-white px-3 py-1 rounded-lg text-sm font-semibold hover:bg-red-600 active:bg-red-700 transition"
